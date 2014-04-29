@@ -21,20 +21,21 @@ namespace Connect
     {
         // Allocate into the LOH
         const int BufferSize = 85000;
-        byte[] zeroAcceptBuffer = new byte[BufferSize];
+        readonly byte[] _zeroAcceptBuffer = new byte[BufferSize];
         ConcurrentQueue<ArraySegment<Byte>> bufferList;
-        private GCHandle handle;
+        private GCHandle _handle;
         const int BufferCount = 10;
         const int SingleBufferCount = 4;
 
-        public AcceptArgsPool()
+        public AcceptArgsPool(ConcurrentQueue<ArraySegment<byte>> bufferList)
         {
+            this.bufferList = bufferList;
             //Pin the buffer;
-            this.handle = GCHandle.Alloc(zeroAcceptBuffer);
+            this._handle = GCHandle.Alloc(_zeroAcceptBuffer);
 
             for (int i = 0; i < BufferCount; i++)
             {
-                var buffer = new ArraySegment<byte>(zeroAcceptBuffer, i * SingleBufferCount, SingleBufferCount);
+                var buffer = new ArraySegment<byte>(_zeroAcceptBuffer, i * SingleBufferCount, SingleBufferCount);
                 bufferList.Enqueue(buffer);
             }
         }

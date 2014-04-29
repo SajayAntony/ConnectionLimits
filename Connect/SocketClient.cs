@@ -12,32 +12,31 @@ namespace Connect
     class SocketClient
     {
         public const int MessageSize = 4;
-        volatile bool pending = false;
-        public volatile int queued = 0;
-        WaitCallback SendCoreHandler;
+        volatile bool _pending = false;
+        public volatile int Queued = 0;
+        readonly WaitCallback _sendCoreHandler;
         public event EventHandler OnConnected;
-        public long bytesTransfered = 0;
+        public long BytesTransfered = 0;
         public EventHandler<long> OnSend;
 
         public SocketClient(string host, int port)
         {
             IPHostEntry ipHostInfo = Dns.GetHostEntry(host);
-            IPAddress ipAddress = ipHostInfo.AddressList.Where(a => a.AddressFamily == AddressFamily.InterNetwork).First();
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
+            IPAddress ipAddress = ipHostInfo.AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork);
+            var remoteEp = new IPEndPoint(ipAddress, port);
 
             // Create a TCP/IP socket.
-            this.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.Socket.NoDelay = true;
-            this.SendCoreHandler = new WaitCallback(SendCore);
-            this.args = new SocketAsyncEventArgs();
-            args.Completed += ArgsCallback;
-            args.SetBuffer(new byte[MessageSize], 0, MessageSize);
+            this.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) {NoDelay = true};
+            this._sendCoreHandler = new WaitCallback(SendCore);
+            this.Args = new SocketAsyncEventArgs();
+            Args.Completed += ArgsCallback;
+            Args.SetBuffer(new byte[MessageSize], 0, MessageSize);
             for (int i = 0; i < MessageSize; i++)
             {
-                args.Buffer[i] = (byte)i;
+                Args.Buffer[i] = (byte)i;
             }
 
-            args.RemoteEndPoint = remoteEP;         
+            Args.RemoteEndPoint = remoteEp;         
    
             // setup port scalability
             this.Socket.SetSocketOption(SocketOptionLevel.Socket, (SocketOptionName)0x3006, true);
@@ -45,21 +44,21 @@ namespace Connect
 
         public void ConnectAsync()
         {
-            this.pending = true;
-            args.SetBuffer(0, 0);
-            if (!Socket.ConnectAsync(args))
+            this._pending = true;
+            Args.SetBuffer(0, 0);
+            if (!Socket.ConnectAsync(Args))
             {
-                ArgsCallback(null, args);
+                ArgsCallback(null, Args);
             }
         }
 
         void ArgsCallback(object sender, SocketAsyncEventArgs e)
         {
-            pending = false;
+            _pending = false;
             this.TerminateProcessOnError();
             if (e.LastOperation == SocketAsyncOperation.Connect)
             {
-                args.SetBuffer(0, args.Buffer.Length);
+                Args.SetBuffer(0, Args.Buffer.Length);
                 if (this.OnConnected != null)
                 {
                     this.OnConnected(this, EventArgs.Empty);
@@ -67,7 +66,7 @@ namespace Connect
             }
             else if(e.LastOperation == SocketAsyncOperation.Send)
             {
-                Interlocked.Add(ref this.bytesTransfered, e.BytesTransferred);
+                Interlocked.Add(ref this.BytesTransfered, e.BytesTransferred);
                 if (this.OnSend != null)
                 {
                     this.OnSend(this, e.BytesTransferred);
@@ -79,32 +78,32 @@ namespace Connect
 
         internal void Send()
         {
-            this.queued++;
+            this.Queued++;
             SendCore(null);
         }
 
         private void SendCore(object state)
         {
-            if (this.queued <= 0)
+            if (this.Queued <= 0)
             {
                 return;
             }
 
-            if (!pending)
+            if (!_pending)
             {
                 lock (this.Socket)
                 {
-                    if (!pending)
+                    if (!_pending)
                     {
-                        queued--;
-                        pending = true;
-                        if (!this.Socket.SendAsync(this.args))
+                        Queued--;
+                        _pending = true;
+                        if (!this.Socket.SendAsync(this.Args))
                         {
-                            this.pending = false;
+                            this._pending = false;
                             this.TerminateProcessOnError();
-                            if (this.queued > 0)
+                            if (this.Queued > 0)
                             {
-                                ThreadPool.UnsafeQueueUserWorkItem(this.SendCoreHandler, null);
+                                ThreadPool.UnsafeQueueUserWorkItem(this._sendCoreHandler, null);
                             }
                         }
                     }
@@ -114,14 +113,14 @@ namespace Connect
 
         private void TerminateProcessOnError()
         {
-            if (this.args.SocketError != SocketError.Success)
+            if (this.Args.SocketError != SocketError.Success)
             {
-                Console.WriteLine("Socket error = " + this.args.SocketError);
+                Console.WriteLine("Socket error = " + this.Args.SocketError);
                 Environment.Exit(1);
             }
         }        
 
-        public SocketAsyncEventArgs args { get; set; }
+        public SocketAsyncEventArgs Args { get; set; }
 
         public Socket Socket { get; set; }
     }

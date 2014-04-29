@@ -13,12 +13,11 @@ namespace Connect
         {
             SetupThreadPool();
 
-
             try
             {
                 Console.WriteLine("PID:" + Process.GetCurrentProcess().Id);
                 var arguments = CommandLine.Parse<ConnectArgs>();
-                if (String.Compare(arguments.mode, "server", true) == 0)
+                if (System.String.Compare(arguments.mode, "server", System.StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     StartServer(arguments);
                     CommandLine.Pause();

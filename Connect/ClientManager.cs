@@ -12,7 +12,6 @@ namespace Connect
 {
     class ClientManager
     {
-
         ConnectArgs arguments;
         int messageSize = SocketClient.MessageSize;
 
@@ -23,12 +22,9 @@ namespace Connect
 
         public IDisposable Start()
         {
-            Queue<SocketClient> clients = new Queue<SocketClient>(arguments.connectionLimit);
+            var clients = new Queue<SocketClient>(arguments.connectionLimit);
             var connections = new Subject<SocketClient>();
-            EventHandler connecthandler = (s, args) =>
-            {
-                connections.OnNext(s as SocketClient);
-            };
+            EventHandler connecthandler = (s, args) => connections.OnNext(s as SocketClient);
 
 
             long bytesSent = 0;
@@ -40,7 +36,7 @@ namespace Connect
 
             Action connect = () =>
             {
-                SocketClient client = new SocketClient(arguments.server, arguments.port);
+                var client = new SocketClient(arguments.server, arguments.port);
                 client.OnConnected += connecthandler;
                 client.OnSend += onsend;
                 client.ConnectAsync();
@@ -117,7 +113,7 @@ namespace Connect
                 .TakeWhile(_ => clients.Count < arguments.connectionLimit)
                 .Subscribe(_ =>
                 {
-                    int numberOfClients = (int)Math.Ceiling(clients.Count / 60.0);
+                    var numberOfClients = (int)Math.Ceiling(clients.Count / 60.0);
                     Console.WriteLine("client: Pinging {0} connections", numberOfClients);
                     for (int i = 0; i < numberOfClients; i++)
                     {
@@ -142,6 +138,5 @@ namespace Connect
                 c.Send();
             }
         }
-
     }
 }
