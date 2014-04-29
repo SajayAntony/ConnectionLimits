@@ -57,16 +57,12 @@ namespace Connect
         }
     }
 
-
     public static class SocketExtensions
     {
         public static IObservable<Socket> OnAccept(this Socket listenerSocket)
         {
             var acceptor = new Subject<Socket>();
-            Func<AsyncCallback, object, IAsyncResult> begin = (callback, state) =>
-                {
-                    return listenerSocket.BeginAccept(callback, state);
-                };
+            Func<AsyncCallback, object, IAsyncResult> begin = listenerSocket.BeginAccept;
 
             Func<IAsyncResult, Socket> end = (iar) =>
             {
@@ -89,10 +85,7 @@ namespace Connect
             {
                 Observable.FromAsync(acceptTask)
                     .Repeat()
-                    .Subscribe(s =>
-                    {
-                        acceptor.OnNext(s);
-                    });
+                    .Subscribe(acceptor.OnNext);
             }
 
             return acceptor;
@@ -105,12 +98,12 @@ namespace Connect
 
         class MessagePump : IObservable<Unit>
         {
-            private SocketAsyncEventArgs args;
-            private IObserver<Unit> observer;
+            private readonly SocketAsyncEventArgs args;
+            private IObserver<Unit> _observer;
             public Socket socket { get; set; }
-            static int indexer = 0;
-            int index = indexer++;
-            bool ignoreReset = true;
+            static int _indexer = 0;
+            int _index = _indexer++;
+            bool _ignoreReset = true;
 
             public MessagePump(Socket socket)
             {
@@ -143,7 +136,7 @@ namespace Connect
                     {
                         if (this.args.BytesTransferred > 0)
                         {
-                            this.observer.OnNext(Unit.Default);
+                            this._observer.OnNext(Unit.Default);
                         }
                     }
 
@@ -158,17 +151,18 @@ namespace Connect
 
             static void args_Completed(object sender, SocketAsyncEventArgs e)
             {
-                MessagePump pump = e.UserToken as MessagePump;
-                pump.CompleteReceive();
+                var pump = e.UserToken as MessagePump;
+                if (pump != null) 
+                    pump.CompleteReceive();
             }
 
             private void TerminateOnError(SocketAsyncEventArgs e)
             {
                 if (e.SocketError != SocketError.Success)
                 {
-                    if (e.SocketError == SocketError.ConnectionReset && ignoreReset)
+                    if (e.SocketError == SocketError.ConnectionReset && _ignoreReset)
                     {
-                        ignoreReset = false;
+                        _ignoreReset = false;
                         Console.WriteLine("Connection reset received from " + socket.RemoteEndPoint.ToString());
                         return;
                     }
@@ -179,13 +173,14 @@ namespace Connect
 
             public IDisposable Subscribe(IObserver<Unit> observer)
             {
-                this.observer = observer;
+                this._observer = observer;
 
                 ThreadPool.UnsafeQueueUserWorkItem((s) =>
                 {
-                    MessagePump p = s as MessagePump;
+                    var p = s as MessagePump;
                     p.CompleteReceive();
                 }, this);
+
                 return Disposable.Create(() =>
                     {
                         this.socket.Dispose();
