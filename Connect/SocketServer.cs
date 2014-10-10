@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Net;
 using System.Net.Sockets;
 using System.Reactive;
@@ -23,11 +21,11 @@ namespace Connect
 
         private static Socket Start(int port)
         {
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress ipAddress = ipHostInfo.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
+            var ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
+            var ipAddress = ipHostInfo.AddressList[0];
+            var localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
-            Socket listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            var listener = new Socket(SocketType.Stream, ProtocolType.Tcp);
             listener.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, 0);
             listener.Bind(localEndPoint);
             listener.Listen(500);
@@ -81,7 +79,7 @@ namespace Connect
 
             Func<Task<Socket>> acceptTask = () => Task.Factory.FromAsync(begin, end, null);
 
-            for (int i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
                 Observable.FromAsync(acceptTask)
                     .Repeat()

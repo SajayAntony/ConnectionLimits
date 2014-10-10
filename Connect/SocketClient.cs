@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Connect
 {
@@ -21,8 +18,8 @@ namespace Connect
 
         public SocketClient(string host, int port)
         {
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(host);
-            IPAddress ipAddress = ipHostInfo.AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork);
+            var ipHostInfo = Dns.GetHostEntry(host);
+            var ipAddress = ipHostInfo.AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork);
             var remoteEp = new IPEndPoint(ipAddress, port);
 
             // Create a TCP/IP socket.
@@ -31,7 +28,7 @@ namespace Connect
             this.Args = new SocketAsyncEventArgs();
             Args.Completed += ArgsCallback;
             Args.SetBuffer(new byte[MessageSize], 0, MessageSize);
-            for (int i = 0; i < MessageSize; i++)
+            for (var i = 0; i < MessageSize; i++)
             {
                 Args.Buffer[i] = (byte)i;
             }

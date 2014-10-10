@@ -10,19 +10,19 @@ namespace Connect
         public bool Help { get; set; }
 
         [CommandLineParameter(Command = "mode", ParameterIndex = 1, Required = false, Description = "Specified either client mode or server model")]
-        public string mode { get; set; }
+        public string Mode { get; set; }
 
         [CommandLineParameter(Command = "server", Required = false, Description = "Server to connect to")]
-        public string server { get; set; }
+        public string Server { get; set; }
 
 
         [CommandLineParameter(Command = "port", Required = false, Default = 8080, Description = "Server port to listen or connect to.")]
-        public int port { get; set; }
+        public int Port { get; set; }
 
         [CommandLineParameter(Command = "climit", Required = false, Default = 1, Description = "Number of connection.")]
-        public int connectionLimit { get; set; }
+        public int ConnectionLimit { get; set; }
 
         [CommandLineParameter(Command = "rate", Required = false, Default = 1, Description = "Rate of outbound messages.")]
-        public int messageRate { get; set; }
+        public int MessageRate { get; set; }
     }
 }

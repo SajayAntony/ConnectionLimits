@@ -1,19 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reactive.Subjects;
-using System.Reactive;
 using System.Reactive.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net;
 
 namespace Connect
 {
     class ClientManager
     {
-        ConnectArgs arguments;
-        int messageSize = SocketClient.MessageSize;
+        readonly ConnectArgs arguments;
+        private const int messageSize = SocketClient.MessageSize;
 
         public ClientManager(ConnectArgs arguments)
         {
@@ -22,7 +17,7 @@ namespace Connect
 
         public IDisposable Start()
         {
-            var clients = new Queue<SocketClient>(arguments.connectionLimit);
+            var clients = new Queue<SocketClient>(arguments.ConnectionLimit);
             var connections = new Subject<SocketClient>();
             EventHandler connecthandler = (s, args) => connections.OnNext(s as SocketClient);
 
@@ -36,7 +31,7 @@ namespace Connect
 
             Action connect = () =>
             {
-                var client = new SocketClient(arguments.server, arguments.port);
+                var client = new SocketClient(arguments.Server, arguments.Port);
                 client.OnConnected += connecthandler;
                 client.OnSend += onsend;
                 client.ConnectAsync();
@@ -48,11 +43,11 @@ namespace Connect
 
             //Ping(clients);
 
-            int count = 0;
+            var count = 0;
             var resource = connections.Subscribe(_ =>
             {
                 count++;
-                if (count < arguments.connectionLimit)
+                if (count < arguments.ConnectionLimit)
                 {
                     connect();
                 }
@@ -64,11 +59,11 @@ namespace Connect
                 () =>
                 {
                     Console.WriteLine("client: Active {0} connections", count);
-                    Console.WriteLine("Sending Messages at a rate of {0} messages/sec", arguments.messageRate);
+                    Console.WriteLine("Sending Messages at a rate of {0} messages/sec", arguments.MessageRate);
                     Observable.Interval(TimeSpan.FromSeconds(1))
                              .Subscribe(_ =>
                              {
-                                 for (int i = 0; i < arguments.messageRate; i++)
+                                 for (var i = 0; i < arguments.MessageRate; i++)
                                  {
                                      MessageNextClient(clients);
                                  }
@@ -79,14 +74,14 @@ namespace Connect
             long previousConnects = 0;
             const int pollTimeSeconds = 2;
             Observable.Interval(TimeSpan.FromSeconds(pollTimeSeconds))
-                .TakeWhile(_ => count < arguments.connectionLimit)
+                .TakeWhile(_ => count < arguments.ConnectionLimit)
                 .Subscribe(_ =>
                 {
                     var diff = count - previousConnects;
                     Console.WriteLine("client: Active: {0} \tconnects/sec: {1}  \tPending: {2}",
                         count,
                         diff / pollTimeSeconds,
-                        arguments.connectionLimit - count);
+                        arguments.ConnectionLimit - count);
                     previousConnects = count;
                 });
 
@@ -110,12 +105,12 @@ namespace Connect
         private void Ping(Queue<SocketClient> clients)
         {
             Observable.Interval(TimeSpan.FromSeconds(1))
-                .TakeWhile(_ => clients.Count < arguments.connectionLimit)
+                .TakeWhile(_ => clients.Count < arguments.ConnectionLimit)
                 .Subscribe(_ =>
                 {
                     var numberOfClients = (int)Math.Ceiling(clients.Count / 60.0);
                     Console.WriteLine("client: Pinging {0} connections", numberOfClients);
-                    for (int i = 0; i < numberOfClients; i++)
+                    for (var i = 0; i < numberOfClients; i++)
                     {
                         MessageNextClient(clients);
                     }
